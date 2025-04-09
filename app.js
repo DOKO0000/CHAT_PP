@@ -1,52 +1,57 @@
-// Configuración de Firebase (reemplaza con tus datos)
+
+import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-app.js";
+import { getDatabase, ref, push, onChildAdded } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-database.js";
+import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-auth.js";
+
+
 const firebaseConfig = {
-  apiKey: "TU_API_KEY",
+  apiKey: "AIzaSyAODEeLDqgGQs4fiZrp8mNHhu5gx4kaVFM",
   authDomain: "fotocredencial-30d54.firebaseapp.com",
   databaseURL: "https://fotocredencial-30d54-default-rtdb.firebaseio.com",
   projectId: "fotocredencial-30d54",
-  storageBucket: "fotocredencial-30d54.appspot.com",
-  messagingSenderId: "TU_SENDER_ID",
-  appId: "TU_APP_ID"
+  storageBucket: "fotocredencial-30d54.firebasestorage.app",
+  messagingSenderId: "367956353078",
+  appId: "1:367956353078:web:c3a1af92dbd86257d0b897",
+  measurementId: "G-RESTQ3S2ZK"
 };
 
-// Inicializar Firebase
-firebase.initializeApp(firebaseConfig);
-const database = firebase.database();
-const auth = firebase.auth();
 
-// Elementos del DOM
+const app = initializeApp(firebaseConfig);
+const database = getDatabase(app);
+const auth = getAuth(app);
+
+
 const usernameInput = document.getElementById('username');
 const loginBtn = document.getElementById('loginBtn');
 const chatArea = document.getElementById('chatArea');
 const messageInput = document.getElementById('messageInput');
 const sendBtn = document.getElementById('sendBtn');
 
-// Clave secreta para cifrado
 const secretKey = "clave-secreta-fotocredencial-2023";
 
-// Usuarios permitidos (en mayúsculas)
+
 const USUARIOS_PERMITIDOS = ['NICKO', 'DOKO', 'DANIEL', 'JULIO'];
 
-// Estado de la aplicación
+
 let currentUser = null;
 
-// Función para verificar usuario
+
 function verificarUsuario(username) {
     return USUARIOS_PERMITIDOS.includes(username.toUpperCase());
 }
 
-// Función para cifrar mensajes
+
 function encryptMessage(message) {
     return CryptoJS.AES.encrypt(message, secretKey).toString();
 }
 
-// Función para descifrar mensajes
+
 function decryptMessage(ciphertext) {
     const bytes = CryptoJS.AES.decrypt(ciphertext, secretKey);
     return bytes.toString(CryptoJS.enc.Utf8);
 }
 
-// Función para mostrar mensajes en el chat
+
 function displayMessage(sender, message, isCurrentUser) {
     const messageElement = document.createElement('div');
     messageElement.classList.add('message');
@@ -67,7 +72,7 @@ function displayMessage(sender, message, isCurrentUser) {
     chatArea.scrollTop = chatArea.scrollHeight;
 }
 
-// Validación en tiempo real del nombre de usuario
+
 usernameInput.addEventListener('input', () => {
     const username = usernameInput.value.trim().toUpperCase();
     if (username && !verificarUsuario(username)) {
@@ -77,7 +82,7 @@ usernameInput.addEventListener('input', () => {
     }
 });
 
-// Iniciar sesión anónima
+
 loginBtn.addEventListener('click', () => {
     const username = usernameInput.value.trim().toUpperCase();
     
@@ -91,7 +96,7 @@ loginBtn.addEventListener('click', () => {
         return;
     }
     
-    auth.signInAnonymously()
+    signInAnonymously(auth)
         .then(() => {
             currentUser = {
                 id: Date.now().toString(),
@@ -104,7 +109,8 @@ loginBtn.addEventListener('click', () => {
             sendBtn.disabled = false;
             
             // Escuchar mensajes existentes
-            database.ref('messages').on('child_added', (snapshot) => {
+            const messagesRef = ref(database, 'messages');
+            onChildAdded(messagesRef, (snapshot) => {
                 const messageData = snapshot.val();
                 // Verificar que el remitente sea válido
                 if (USUARIOS_PERMITIDOS.includes(messageData.senderName)) {
@@ -125,7 +131,7 @@ loginBtn.addEventListener('click', () => {
         });
 });
 
-// Enviar mensaje
+
 sendBtn.addEventListener('click', sendMessage);
 messageInput.addEventListener('keypress', (e) => {
     if (e.key === 'Enter' && !e.shiftKey) {
@@ -138,12 +144,13 @@ function sendMessage() {
     const message = messageInput.value.trim();
     if (message && currentUser) {
         const encryptedMessage = encryptMessage(message);
+        const messagesRef = ref(database, 'messages');
         
-        database.ref('messages').push({
+        push(messagesRef, {
             senderId: currentUser.id,
             senderName: currentUser.name,
             text: encryptedMessage,
-            timestamp: firebase.database.ServerValue.TIMESTAMP
+            timestamp: Date.now()
         })
         .then(() => {
             messageInput.value = '';
